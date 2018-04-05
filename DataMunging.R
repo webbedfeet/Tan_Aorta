@@ -23,12 +23,15 @@ cleanData <- function(d) {
     gather(variable, value, -angle) %>%
     separate(variable, c('ID','Measure'), sep = '_') %>%
     spread(Measure, value) %>%
-    select(Spine, ID, angle, Dist2Aorta, SyndHeight) %>%
+    select(ID, angle, Dist2Aorta, SyndHeight) %>%
     arrange(ID, angle)
   return(data)
 }
 
 dat <- tidyxl::xlsx_cells(dir(datadir, full.names = T))
 
-dat %>% nest(-sheet) %>%
-  mutate(cleaned = map(data, cleanData)) -> blah
+cleaned_dat <- dat %>% nest(-sheet) %>%
+  mutate(cleaned = map(data, cleanData)) %>%
+  select(sheet, cleaned) %>%
+  unnest() %>% rename(Spine = sheet)
+saveRDS(cleaned_dat, file = 'data/rda/cleaned_data.rds', compress = T)
