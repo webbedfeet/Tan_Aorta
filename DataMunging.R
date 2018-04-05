@@ -33,5 +33,8 @@ dat <- tidyxl::xlsx_cells(dir(datadir, full.names = T))
 cleaned_dat <- dat %>% nest(-sheet) %>%
   mutate(cleaned = map(data, cleanData)) %>%
   select(sheet, cleaned) %>%
-  unnest() %>% rename(Spine = sheet)
+  unnest() %>% rename(Spine = sheet) %>%
+  mutate(Spine = as.factor(Spine)) %>%
+  mutate(Spine = forcats::lvls_reorder(Spine, c(7:11,4:6,1:3)))
+
 saveRDS(cleaned_dat, file = 'data/rda/cleaned_data.rds', compress = T)
