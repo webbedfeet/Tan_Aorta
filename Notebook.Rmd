@@ -1,0 +1,31 @@
+---
+title: "Notebook (Tan_Aorta)"
+author: Abhijit Dasgupta
+output: 
+  html_notebook:
+    theme: united
+    highlight: tango
+---
+
+```{r setup, include=F}
+cleaned_dat <- readRDS('data/rda/cleaned_data.rds')
+```
+
+
+## Project objectives
+
+This project looks at syndesmophyte growth data for `r length(unique(cleaned_dat$ID))` individuals 
+over `r length(unique(cleaned_dat$Spine))` spinal joints and its association with proximity to the 
+aorta. The computed distances from the aorta to each 5^o^ segment of the joint is also provided.
+
+The basic hypothesis is that proximity to the aorta suppresses growth, so we would expect the growth
+in the sectors closest to the aorta to be the least, and the growth there would be present less often. A 
+secondary question involves the association of the presence of growth with proximity to the aorta. 
+
+
+## Exploratory analysis
+
+
+
+
+
