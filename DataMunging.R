@@ -1,4 +1,7 @@
 ProjTemplate::reload()
+datadir <- file.path(ProjTemplate::find_dropbox(), 'NIAMS','Ward','Tan_Aorta')
+dir.exists(datadir)
+
 dat <- readRDS('data/rda/raw_data.rds')
 
 d <- dat %>% filter(sheet == 'T5T6')
@@ -35,6 +38,7 @@ cleaned_dat <- dat %>% nest(-sheet) %>%
   select(sheet, cleaned) %>%
   unnest() %>% rename(Spine = sheet) %>%
   mutate(Spine = as.factor(Spine)) %>%
-  mutate(Spine = forcats::lvls_reorder(Spine, c(7:11,4:6,1:3)))
+  mutate(Spine = forcats::lvls_reorder(Spine, c(7:11,4:6,1:3))) %>%
+  mutate(SyndPresent = ifelse(SyndHeight > 0, 1, 0))
 
 saveRDS(cleaned_dat, file = 'data/rda/cleaned_data.rds', compress = T)
