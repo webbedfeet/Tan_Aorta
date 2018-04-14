@@ -54,30 +54,23 @@ cleaned_dat_summarized %>% mutate(propSynd = 50*propSynd) %>%
 
 
 
-cleaned_dat %>% filter(Spine == 'T10T11') %>%
-  ggplot(aes(x = Dist2Aorta,y = SyndHeight, group = ID))+
-  geom_smooth(se=F)
+# Ranking distances and looking for relationships ---------------------------------------------
 
-cleaned_dat %>% filter(Spine == 'T10T11', ID == '10') %>%
-  ggplot(aes(x = Dist2Aorta, y = SyndHeight))+
-  geom_line()
+cleaned_dat <- cleaned_dat %>% group_by(Spine, ID) %>%
+  mutate(DistRank = rank(Dist2Aorta, ties.method = 'min')) %>% ungroup()
+dat_summarize <- cleaned_dat %>% group_by(Spine, DistRank) %>%
+  summarize(PctPos = mean(SyndPresent, na.rm=T),
+            meanHt = mean(SyndHeight, na.rm=T)) %>%
+  ungroup()
+ggplot(dat_summarize, aes(x = DistRank, y = PctPos))+
+  geom_point(alpha = 0.5)+
+  geom_smooth() +
+  facet_wrap(~Spine)+
+  labs(x = 'Rank of each sector based on distance from aorta',
+       y = 'Percent of individuals with postive growth')
 
+ggplot(dat_summarize, aes(x=DistRank, y = meanHt))+geom_point()+geom_smooth(se=F)+facet_wrap(~Spine)
 
-ggplot(cleaned_dat, aes(Dist2Aorta, SyndHeight))+
-  geom_point(alpha=0.1, size=0.5)+
-  geom_smooth(aes(color=Spine), se=F)
-
-ggplot(cleaned_dat, aes(angle, Dist2Aorta))+
-  geom_point(alpha=0.1)+geom_smooth(aes(color = Spine))
-
-ggplot(cleaned_dat, aes(angle, SyndHeight))+
-  geom_point(alpha = 0.1, size = 0.5) +
-  geom_smooth(aes(color=Spine))
-
-ggplot(cleaned_dat %>% filter(Spine=='T5T6'), aes(Dist2Aorta, SyndHeight))+geom_point() +
-  facet_wrap(~ID)
-
-
-cleaned_dat %>% group_by(ID, Spine) %>%
-  mutate(height_rank = rank(SyndHeight, ties.method = 'min')) %>%
-  top_n(-5, Dist2Aorta) %>% ungroup() %>% count(Spine, angle)
+cleaned_dat %>% group_by(Spine) %>% summarize(minDist = mean(Dist2Aorta, na.rm=T)) %>% ungroup() %>%
+  ggplot(aes(x = minDist, y = Spine))+geom_point() + geom_line(group = 1) +
+  scale_y_discrete(limits = rev(levels(cleaned_dat$Spine)))
