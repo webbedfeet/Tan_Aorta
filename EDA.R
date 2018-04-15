@@ -69,8 +69,18 @@ ggplot(dat_summarize, aes(x = DistRank, y = PctPos))+
   labs(x = 'Rank of each sector based on distance from aorta',
        y = 'Percent of individuals with postive growth')
 
-ggplot(dat_summarize, aes(x=DistRank, y = meanHt))+geom_point()+geom_smooth(se=F)+facet_wrap(~Spine)
+ggplot(dat_summarize, aes(x = DistRank, y = meanHt))+
+  geom_point(alpha = 0.5)+
+  geom_smooth() +
+  facet_wrap(~Spine)+
+  labs(x = 'Rank of each sector based on distance from aorta',
+       y = 'Avg normalized syndesmophyte height')
 
+ggplot(dat_summarize, aes(x=DistRank, y = meanHt)) + geom_point() + geom_smooth(se = F)+
+  facet_wrap(~Spine)
+
+cleaned_dat %>% filter(DistRank==1) %>%
+  ggplot(aes(x = Dist2Aorta, y = SyndHeight))+geom_point() + geom_smooth( se = F)
 cleaned_dat %>% group_by(Spine) %>% summarize(minDist = mean(Dist2Aorta, na.rm=T)) %>% ungroup() %>%
   ggplot(aes(x = minDist, y = Spine))+geom_point() + geom_line(group = 1) +
   scale_y_discrete(limits = rev(levels(cleaned_dat$Spine)))
