@@ -42,3 +42,45 @@ cleaned_dat <- dat %>% nest(-sheet) %>%
   mutate(SyndPresent = ifelse(SyndHeight > 0, 1, 0))
 
 saveRDS(cleaned_dat, file = 'data/rda/cleaned_data.rds', compress = T)
+
+######################################################################
+
+# using tidyxl, tidyverse and unpivotr -------------------------------
+# devtools::install_github('nacnudus/unpivotr')
+library(unpivotr)
+
+dat <- readRDS('data/rda/raw_data.rds')
+d <- dat %>% filter(sheet == 'T5T6')
+cleanData2 <- function(d){
+  d %>% select(row, col, data_type, numeric, character) %>%
+    behead('N', ID) %>%
+    behead('N', spine) %>%
+    behead('N', variable) -> bl
+  bl1 <- bl %>% filter(variable == 'angles') %>% spatter(variable) %>%
+    select(row, angles)
+  bl2 <- bl %>% filter(variable %in% c('SyndHeight','Dist2Aorta')) %>% select(-spine, -col) %>%
+    spatter(ID) %>%
+    select(-character) %>%
+    gather(ID, value, -row, -variable) %>%
+    spread(variable, value)
+  final <- bl1 %>% left_join(bl2) %>% arrange(ID, angles) %>% select(ID, everything(),-row)
+  return(final)
+}
+
+cleanData3 <- function(d) {
+  d %>%
+    select(row, col, data_type, numeric, character) %>%
+    behead('N', ID) %>%
+    behead('N', spine) %>%
+    behead('N', variable) %>%
+    behead('W', angle) %>%
+    select(numeric, ID:angle, data_type, -spine) %>%
+    filter(variable %in% c('Dist2Aorta', 'SyndHeight')) %>%
+    spatter(variable) -> final
+  return(final)
+}
+
+cleaned_dat2 <- dat %>% nest(-sheet) %>%
+  mutate(cleaned=map(data, cleanData3)) %>%
+  select(-data) %>%
+  unnest()
