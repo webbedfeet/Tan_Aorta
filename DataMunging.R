@@ -47,8 +47,9 @@ munge_data <- function(d){
     select(-ends_with('header')) %>%
     set_names(str_remove(names(.), '.data')) %>%
     select(data_type:angle) %>%
-    spatter(variable)
-  d2 %>% mutate(rel_angle = angle - angle[which.min(Dist2Aorta)])
+    spatter(variable) %>%
+    mutate(rel_angle = seq(-90,90,by=5)) # relative angle from nadir, designated 0
+  # d2 %>% mutate(rel_angle = angle - angle[which.min(Dist2Aorta)])
 }
 
 munged_data <-  bind_rows(
@@ -69,3 +70,5 @@ munged_data <-  bind_rows(
   mutate(SyndPresent = ifelse(SyndHeight > 0, 1, 0))
 
 saveRDS(munged_data, file = 'data/rda/cleaned_data_2.rds', compress = T)
+
+munged_data2 <- munged_data %>% filter(abs(rel_angle) <= 50)
