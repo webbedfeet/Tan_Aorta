@@ -6,14 +6,24 @@
 
 ProjTemplate::reload()
 
-cleaned_dat <- readRDS('data/rda/cleaned_data.rds')
+cleaned_dat <- readRDS('data/rda/cleaned_data_2.rds')
 
 cleaned_dat %>% group_by(Spine) %>% summarize(NumberOfPts = length(unique(ID)))
 # Overall association with height and distance ------------------------------------------------
 
 ggplot(cleaned_dat, aes(Dist2Aorta, SyndHeight))+
-  geom_point(alpha=.1, size=0.5) + geom_smooth()
+  geom_point(alpha=.1, size=0.5) +
+  geom_smooth(aes(group = Spine, color = Spine), se=F, size=1.5)
 
+ggplot(filter(cleaned_dat, Spine %in% c('T5T6','T6T7','T7T8','T8T9','T9T10','T10T11')),
+       aes(Dist2Aorta, SyndHeight))+
+  geom_point(alpha = 0.1, size = 0.5) +
+  geom_smooth(aes(group = Spine, color = Spine), se=F, size=1.5)
+
+ggplot(filter(cleaned_dat, Spine %in% c('T11T12','T12L1','L1L2','L2L3','L3L4')),
+       aes(Dist2Aorta, SyndHeight))+
+  geom_point(alpha = 0.1, size = 0.5) +
+  geom_smooth(aes(group = Spine, color = Spine), se=F, size=1.5)
 
 
 # Association by spine level ------------------------------------------------------------------
@@ -84,3 +94,12 @@ cleaned_dat %>% filter(DistRank==1) %>%
 cleaned_dat %>% group_by(Spine) %>% summarize(minDist = mean(Dist2Aorta, na.rm=T)) %>% ungroup() %>%
   ggplot(aes(x = minDist, y = Spine))+geom_point() + geom_line(group = 1) +
   scale_y_discrete(limits = rev(levels(cleaned_dat$Spine)))
+
+##%######################################################%##
+#                                                          #
+####                 With centered data                 ####
+#                                                          #
+##%######################################################%##
+
+
+munged_data <- readRDS('data/rda/cleaned_data_2.rds')
