@@ -1,10 +1,16 @@
 # Permutation testing
 
+# Setup ---------------------------------------------------------------------------------------
+
 ProjTemplate::reload()
 datadir <- file.path(ProjTemplate::find_dropbox(), 'NIAMS','Ward','Tan_Aorta')
 dir.exists(datadir)
 
 munged_data <- readRDS('data/rda/cleaned_data_2.rds')
+
+
+# Permutation testing -------------------------------------------------------------------------
+
 x <- seq(-90,80,by=5)
 wedges <- as.list(data.frame(rbind(x, x+5, x+10)))
 
@@ -152,3 +158,54 @@ for(sp in names(bs_data_prob)){
   print(plt)
 }
 dev.off()
+
+
+# Comparing different sectors (Bayesian) -----------------------------------------------------------------
+
+## Let's compare the 0 angle to the +/- 15, 30 and 45 angles. We will evaluate the
+## probability that any of these sectors have at least as much growth as the 0th sector.
+## We will take a Bayesian approach using `rstanarm`
+
+library(rstanarm)
+munged_data <- readRDS('data/rda/cleaned_data_2.rds')
+expit <- function(x) exp(x)/(1+exp(x))
+
+d <- munged_data %>% filter(rel_angle %in% c(0, 15, 30, 45, -15, -30, -45)) %>%
+  select(Spine, ID, rel_angle, SyndHeight) %>% spread(rel_angle, SyndHeight) %>%
+  gather(rel.angle, SyndHeight, -Spine, -ID, -`0`) %>%
+  mutate(inds = ifelse(SyndHeight >= `0`, 1, 0)) %>%
+  select(-`0`, -SyndHeight) %>%
+  spread(rel.angle, inds)
+d %>% group_by(Spine) %>% summarise_at(vars(`-15`:`45`), funs(mean))
+
+d1 <- d %>% gather(rel.angle, inds, `-15`:`45`) %>% mutate(inds = as.factor(inds)) %>%
+  nest(-Spine, -rel.angle) %>%
+  mutate(all_pos = map_int(data, ~all(.$inds==1)),
+         posterior.summary = map(data, ~data.frame(matrix(qbeta(c(0.025,0.5, 0.975), 1 + sum(.$inds=='1'), 1+ sum(.$inds=='0')), nrow=1))))
+
+d2 <- d1 %>% select(Spine, rel.angle, posterior.summary) %>% unnest() %>%
+  rename(lower.bound=X1, posterior.median=X2, upper.bound = X3)
+
+# d2 <- d1 %>% filter(all_pos == 0) %>%
+#   mutate(mods = map(data, ~stan_glm(inds~1, data = ., family=binomial(link='logit'),
+#                                     prior_intercept = normal(0,1.75))))
+# d3 <- d2 %>%
+#   mutate(posterior.median = map_dbl(mods, ~expit(median(as.matrix(.)[,1]))),
+#          lower.bound = map_dbl(mods, ~expit(quantile(as.matrix(.)[,1], 0.025))),
+#          upper.bound = map_dbl(mods, ~expit(quantile(as.matrix(.)[,1], 0.975)))) %>%
+#   select(-data, -mods)
+
+N <- munged_data %>% group_by(Spine) %>% summarize(nobs = length(unique(ID))) %>% ungroup()
+final_d <- d2 %>%  left_join(N)
+
+# For uniform prior, posterior is Beta(1 + x, 1+n-x)
+
+final_d <- final_d %>% arrange(Spine, rel.angle)
+
+ggplot(final_d, aes(x = Spine, y = posterior.median, ymin = lower.bound, ymax = upper.bound))+
+  geom_pointrange()+
+  facet_wrap(~rel.angle) +
+  scale_x_discrete(limits = rev(levels(final_d$Spine))) +
+  xlab("Spine joint")+
+  ylab('Posterior 95% interval for P(Sector growth \u2265 Sector 0 growth)')+coord_flip()+
+  theme_bw()
