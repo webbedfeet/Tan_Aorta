@@ -166,7 +166,8 @@ dev.off()
 ## probability that any of these sectors have at least as much growth as the 0th sector.
 ## We will take a Bayesian approach using `rstanarm`
 
-library(rstanarm)
+#library(rstanarm)
+ProjTemplate::reload()
 munged_data <- readRDS('data/rda/cleaned_data_2.rds')
 expit <- function(x) exp(x)/(1+exp(x))
 
@@ -204,6 +205,8 @@ final_d <- d2 %>%  left_join(N)
 final_d <- final_d %>% arrange(Spine, rel.angle) %>%
   mutate(rel.angle = factor(rel.angle, levels = c('-45','-30','-15','15','30','45')))
 
+library(Cairo) # Need this for including Unicode characters
+cairo_pdf('PosteriorProbs.pdf', width = 10, height = 7.5)
 ggplot(final_d,
        aes(x = rel.angle, y = posterior.median, ymin = lower.bound, ymax = upper.bound)) +
   geom_pointrange() +
@@ -213,11 +216,12 @@ ggplot(final_d,
   ylab('Posterior 95% interval for P(Sector growth \u2265 Sector 0 growth)') +
   coord_flip() +
   theme_bw()
+dev.off()
 
 
 # Update Bayesian analysis, using strict less than criterion ----------------------------------
 
-library(rstanarm)
+#library(rstanarm)
 munged_data <- readRDS('data/rda/cleaned_data_2.rds')
 expit <- function(x) exp(x)/(1+exp(x))
 
