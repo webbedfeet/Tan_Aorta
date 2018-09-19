@@ -266,7 +266,12 @@ library(rstanarm)
 munged_data <- readRDS('data/rda/cleaned_data_2.rds')
 expit <- function(x) exp(x)/(1+exp(x))
 
-d <- munged_data %>% filter(rel_angle %in% c(0, 15, 30, 45, -15, -30, -45)) %>%
+d <- munged_data %>%
+  group_by(Spine, ID) %>%
+  mutate(not_fused = !(all(SyndHeight == 1))) %>% # Filter out fully fused joints
+  ungroup() %>%
+  filter(not_fused) %>%
+  filter(rel_angle %in% c(0, 15, 30, 45, -15, -30, -45)) %>%
   select(Spine, ID, rel_angle, SyndHeight) %>% spread(rel_angle, SyndHeight) %>%
   gather(rel.angle, SyndHeight, -Spine, -ID, -`0`) %>%
   mutate(inds = ifelse(SyndHeight >= `0`, 1, 0)) %>%
@@ -298,5 +303,6 @@ ggplot(final_d,
   xlab("Relative angle from nadir") +
   ylab('Posterior 95% interval for P(Sector growth > Sector 0 growth)') +
   coord_flip() +
-  theme_bw()
+  theme_bw()+
+  ggtitle('Among non-fused joints')
 
