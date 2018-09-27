@@ -216,7 +216,7 @@ ggplot(final_d,
   geom_pointrange() +
   facet_wrap(~Spine, nrow = 4) +
   scale_x_discrete(limits = rev(levels(final_d$rel.angle))) +
-  xlab("Nearby sectors") +
+  xlab("Neighboring sectors") +
   ylab('Posterior 95% interval for P(Sector growth \u2265 Sector 0 growth)') +
   coord_flip() +
   theme_bw()
@@ -310,3 +310,24 @@ ggplot(final_d,
   theme_bw()+
   ggtitle('Among non-fused joints')
 
+
+# Mixed models or Bayesian regression to see effect of nadir sector ---------------------------
+
+library(lme4)
+library(rstanarm)
+ProjTemplate::reload()
+munged_data <- readRDS('data/rda/cleaned_data_2.rds')
+expit <- function(x) exp(x)/(1 + exp(x))
+
+dat <- munged_data %>%
+  mutate(sectors = case_when(
+    rel_angle %in% seq(30,45, by=5) ~ 'Sector1',
+    rel_angle %in% seq(10, 25, by = 5) ~ 'Sector 2',
+    rel_angle %in% c(0, 5, -5) ~ 'Sector 3',
+    rel_angle %in% c(-25, -10, by = 5) ~ 'Sector 4',
+    rel_angle %in% c(-45, -30, by = 5) ~ 'Sector 5')) %>%
+  mutate(sectors = factor(sectors, ordered = TRUE)) %>%
+  filter(!is.na(sectors))
+
+lmer(SyndHeight ~ (1|ID) + sectors, data = filter(dat, Spine == 'T5T6') ) %>% anova()
+m1 = lme(SyndHeight ~ sectors, random = ~1|ID, data=filter(dat, Spine=='T5T6'))
