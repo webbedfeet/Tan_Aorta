@@ -327,15 +327,44 @@ expit <- function(x) exp(x)/(1 + exp(x))
 dat <- munged_data %>%
   mutate(sectors = case_when(
     rel_angle %in% seq(30,45, by=5) ~ 'Sector1',
-    rel_angle %in% seq(10, 25, by = 5) ~ 'Sector 2',
-    rel_angle %in% c(0, 5, -5) ~ 'Sector 3',
-    rel_angle %in% c(-25, -10, by = 5) ~ 'Sector 4',
-    rel_angle %in% c(-45, -30, by = 5) ~ 'Sector 5')) %>%
+    rel_angle %in% seq(10, 25, by = 5) ~ 'Sector2',
+    rel_angle %in% c(0, 5, -5) ~ 'Sector3',
+    rel_angle %in% c(-25, -10, by = 5) ~ 'Sector4',
+    rel_angle %in% c(-45, -30, by = 5) ~ 'Sector5')) %>%
   mutate(sectors = factor(sectors, ordered = TRUE)) %>%
   filter(!is.na(sectors))
 bl <- dat %>%
   nest(-ID, -Spine, -sectors) %>%
-  mutate(avg = map_dbl(data, ~mean(.$rel_angle, na.rm=T))) %>%
+  mutate(avg = map_dbl(data, ~mean(.$SyndHeight, na.rm=T))) %>%
   select(-data)
+
+bl %>% spread(sectors, avg) %>% gather(sectors, avg, Sector1, Sector2, Sector4, Sector5) %>%
+  mutate(diffs = avg - Sector3) %>%
+  select(-avg) %>%
+  mutate(sectors = paste0(sectors, '-Sector3')) %>%
+  select(-Sector3) %>%
+  nest(ID,diffs) %>%
+  mutate(tests = map(data, ~wilcox.test(.$diffs, alternative = 'greater'))) %>%
+  mutate(p.values = map_dbl(tests, ~broom::tidy(.)$p.value)) %>%
+  select(-data, -tests) %>%
+  spread(sectors, p.values) %>%
+  openxlsx::write.xlsx(file = 'PValueTable.xlsx')
+
+bl2 <-  dat %>%
+  nest(-ID, -Spine, -sectors) %>%
+  mutate(avg = map_dbl(data, ~median(.$SyndHeight, na.rm=T))) %>%
+  select(-data)
+bl2 %>%
+  spread(sectors, avg) %>% gather(sectors, avg, Sector1, Sector2, Sector4, Sector5) %>%
+  mutate(diffs = avg - Sector3) %>%
+  select(-avg) %>%
+  mutate(sectors = paste0(sectors, '-Sector3')) %>%
+  select(-Sector3) %>%
+  nest(ID,diffs) %>%
+  mutate(tests = map(data, ~wilcox.test(.$diffs, alternative = 'greater'))) %>%
+  mutate(p.values = map_dbl(tests, ~broom::tidy(.)$p.value)) %>%
+  select(-data, -tests) %>%
+  spread(sectors, p.values)
+
 lmer(SyndHeight ~ (1|ID) + sectors, data = filter(dat, Spine == 'T5T6') ) %>% anova()
 m1 = lme(SyndHeight ~ sectors, random = ~1|ID, data=filter(dat, Spine=='T5T6'))
