@@ -319,6 +319,11 @@ ProjTemplate::reload()
 munged_data <- readRDS('data/rda/cleaned_data_2.rds')
 expit <- function(x) exp(x)/(1 + exp(x))
 
+## I actually don't think ANOVA or mixed modeling, or even a Bayesian analysis
+## is appropriate, since the distribution of the outcome is so irregular and
+## not at all justifying a Gaussian likelihood. I think we might be better with
+## Wilcoxon tests.
+##
 dat <- munged_data %>%
   mutate(sectors = case_when(
     rel_angle %in% seq(30,45, by=5) ~ 'Sector1',
@@ -328,6 +333,9 @@ dat <- munged_data %>%
     rel_angle %in% c(-45, -30, by = 5) ~ 'Sector 5')) %>%
   mutate(sectors = factor(sectors, ordered = TRUE)) %>%
   filter(!is.na(sectors))
-
+bl <- dat %>%
+  nest(-ID, -Spine, -sectors) %>%
+  mutate(avg = map_dbl(data, ~mean(.$rel_angle, na.rm=T))) %>%
+  select(-data)
 lmer(SyndHeight ~ (1|ID) + sectors, data = filter(dat, Spine == 'T5T6') ) %>% anova()
 m1 = lme(SyndHeight ~ sectors, random = ~1|ID, data=filter(dat, Spine=='T5T6'))
