@@ -38,3 +38,56 @@ ggplot(munged_data_2, aes(x = d0, y = SyndHeight)) +
   labs(x = 'Sectors from nadir', y = 'Syndesmophyte height')+
   scale_color_manual(name = 'Legend', values = c('Smoother' = 'blue','Linear' = 'red'))+
   theme(legend.position = 'bottom')
+
+ggplot(munged_data_2, aes(x = d1, y = SyndHeight)) +
+  geom_point(alpha = 0.2) +
+  geom_smooth(aes(color = 'Smoother'), se = F) +
+  geom_smooth(aes(color = 'Linear'), method = 'lm', se = F) +
+  facet_wrap(~Spine) +
+  labs(x = 'Sectors from nadir', y = 'Syndesmophyte height')+
+  scale_color_manual(name = 'Legend', values = c('Smoother' = 'blue','Linear' = 'red'))+
+  theme(legend.position = 'bottom')
+
+ggplot(munged_data_2, aes(x = abs(d2), y = SyndHeight)) +
+  geom_point(alpha = 0.2) +
+  geom_smooth(aes(color = 'Smoother'), se = F) +
+  geom_smooth(aes(color = 'Linear'), method = 'lm', se = F) +
+  facet_wrap(~Spine) +
+  labs(x = 'Sectors from nadir', y = 'Syndesmophyte height')+
+  scale_color_manual(name = 'Legend', values = c('Smoother' = 'blue','Linear' = 'red'))+
+  theme(legend.position = 'bottom')
+
+# Plot relation between probability of syndesmophyte and sector location ----------------------
+
+munged_data_2 %>% group_by(Spine, d0) %>%
+  summarize(p1 = mean(SyndHeight > 0), p0 = mean(SyndHeight == 0)) %>%
+  ggplot(aes(x = d0, y = p0)) +
+    geom_point() +
+    geom_smooth(aes(color = 'Linear'), method = 'lm', se = F)+
+    geom_smooth(aes(color = 'Smoother'), se = F)+
+    facet_wrap(~Spine) +
+    labs(x = 'Sectors from nadir', y = 'Probability of no syndesmophyte growth')+
+    scale_color_manual(name = 'Legend', values = c('Smoother' = 'blue', 'Linear' = 'red'))+
+    theme(legend.position = 'bottom')
+
+munged_data_2 %>% group_by(Spine, d1) %>%
+  summarize(p1 = mean(SyndHeight > 0), p0 = mean(SyndHeight == 0)) %>%
+  ggplot(aes(x = d1, y = p0)) +
+  geom_point() +
+  geom_smooth(aes(color = 'Linear'), method = 'lm', se = F)+
+  geom_smooth(aes(color = 'Smoother'), se = F)+
+  facet_wrap(~Spine) +
+  labs(x = 'Sectors from "left"', y = 'Probability of no syndesmophyte growth')+
+  scale_color_manual(name = 'Legend', values = c('Smoother' = 'blue', 'Linear' = 'red'))+
+  theme(legend.position = 'bottom')
+
+munged_data_2 %>% group_by(Spine, d2) %>%
+  summarize(p1 = mean(SyndHeight > 0), p0 = mean(SyndHeight == 0)) %>%
+  ggplot(aes(x = abs(d2), y = p0)) +
+  geom_point() +
+  geom_smooth(aes(color = 'Linear'), method = 'lm', se = F)+
+  geom_smooth(aes(color = 'Smoother'), se = F)+
+  facet_wrap(~Spine) +
+  labs(x = 'Sectors from "right"', y = 'Probability of no syndesmophyte growth')+
+  scale_color_manual(name = 'Legend', values = c('Smoother' = 'blue', 'Linear' = 'red'))+
+  theme(legend.position = 'bottom')
