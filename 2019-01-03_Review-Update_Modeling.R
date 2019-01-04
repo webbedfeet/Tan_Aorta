@@ -39,7 +39,7 @@ munged_data_2 <- munged_data %>%
 
 #+ pattern_plots1, eval = TRUE, echo = FALSE, message = FALSE
 # Plot relation between syndesmophyte height and sectors from nadir ---------------------------
-
+library(cowplot)
 ggplot(munged_data_2, aes(x = d0, y = SyndHeight)) +
   geom_point(alpha = 0.2) +
   geom_smooth(aes(color = 'Smoother'), se = F) +
