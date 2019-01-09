@@ -6,7 +6,8 @@ ProjTemplate::reload()
 datadir <- file.path(ProjTemplate::find_dropbox(), 'NIAMS','Ward','Tan_Aorta')
 dir.exists(datadir)
 
-munged_data <- readRDS('data/rda/cleaned_data_2.rds')
+# system(paste('rsync -azvh ', normalizePath(file.path('data/rda')),' ', datadir))
+munged_data <- readRDS(file.path(datadir,'rda/cleaned_data_2.rds'))
 
 
 # Permutation testing -------------------------------------------------------------------------
