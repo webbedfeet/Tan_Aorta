@@ -272,3 +272,14 @@ blah <- munged_data_2 %>% mutate(rel_angle = as.numeric(as.character(rel_angle))
   mutate(Height = as.factor(Height))
 lattice::cloud(Count ~ rel_angle * Height , data = blah,
                scales = list(arrows=F), zlab = list(z = 'Count', rot=90))
+
+blah2 <- munged_data_2 %>% mutate(rel_angle = as.numeric(as.character(rel_angle))) %>%
+  group_by(rel_angle, dist2aorta_discrete) %>% summarize(prob = mean(SyndPresent))
+lattice::cloud(prob ~ rel_angle*dist2aorta_discrete, data = blah2,
+               xlab = 'Sector', ylab = 'Distance', zlab = list('Probability of growth', rot=90),
+               scales = list(arrows = F))
+blah3 <- munged_data_2 %>% mutate(rel_angle = as.numeric(as.character(rel_angle))) %>%
+  group_by(Spine, rel_angle, dist2aorta_discrete) %>% summarize(prob = mean(SyndPresent))
+lattice::cloud(prob ~ rel_angle*dist2aorta_discrete | Spine, data = blah3,
+               xlab = '', ylab = '', zlab = '',
+               scales = list(arrows = F))
