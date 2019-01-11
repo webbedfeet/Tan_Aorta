@@ -250,3 +250,25 @@ bl <- cbind('Sector' =labs, bl) %>%
   mutate(Sector = str_remove(Sector, 'rel_angle')) %>%
   select(Sector, Estimate, Std.Error,`Pr(>|X^2|)`, Lower, Upper)
 
+
+# GEE with discrete aorta distances -----------------------------------------------------------
+#' We will repeat this process with discretized distance from aorta, cut at <2 and <3 mm
+
+munged_data_2 <- munged_data %>%
+  mutate(dist2aorta_discrete = cut(round(Dist2Aorta,2),c(0, 2, 3, 100), labels = c('< 2', '\u2265 2 & <3', '\u2265 3'), right = F))
+
+m8.discrete <- geeglm(formula = SyndPresent ~ rel_angle + dist2aorta_discrete + Spine +
+                        rel_angle:dist2aorta_discrete, family = binomial(link = logit), data = munged_data_2,
+                      id = ID, corstr = "ex", std.err = "san.se")
+#' This is problematic since many of the rel_angle:dist2aorta_discrete combos have no data
+
+
+# Description of sector x height frequencies --------------------------------------------------
+
+blah <- munged_data_2 %>% mutate(rel_angle = as.numeric(as.character(rel_angle))) %>%
+  count(rel_angle, dist2aorta_discrete) %>%
+  spread(dist2aorta_discrete, n) %>%
+  gather(Height, Count, -rel_angle) %>%
+  mutate(Height = as.factor(Height))
+lattice::cloud(Count ~ rel_angle * Height , data = blah,
+               scales = list(arrows=F), zlab = list(z = 'Count', rot=90))
