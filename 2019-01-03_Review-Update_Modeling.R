@@ -139,6 +139,8 @@ m6 <- update(m0, . ~ . + Spine*Dist2Aorta)
 m7 <- update(m0, . ~ . + rel_angle*Spine + Dist2Aorta)
 m8 <- update(m0, . ~ . + rel_angle*Dist2Aorta + Spine)
 
+saveRDS(m8, file = file.path(datadir,'FinalGEEmodel.rds'), compress = T)
+
 anova(m1, m0)
 #' Analysis of 'Wald statistic' Table
 #'
