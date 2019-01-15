@@ -35,6 +35,7 @@ dir.exists(datadir)
 munged_data <- readRDS(file.path(datadir,'rda','cleaned_data_2.rds'))
 munged_data %<>% mutate( rel_angle = as.factor(rel_angle)) %>%
   mutate(rel_angle = fct_relevel(rel_angle, '0')) %>%
+  mutate(Spine = fct_relevel(Spine, 'T12L1')) %>%
   arrange(ID)
 
 
@@ -125,7 +126,7 @@ munged_data_2 %>% group_by(Spine, d2) %>%
 
 library(geepack)
 
-m0 <- geeglm(SyndPresent ~ rel_angle, data = munged_data,
+m0 <- geeglm(SyndPresent ~ rel_angle, data = munged_data %>% mutate(Dist2Aorta = -Dist2Aorta), # Protective as you get closer
              id = ID,
              family = binomial(link=logit),
              corstr = 'ex',
@@ -240,7 +241,10 @@ anova(m8, m3)
 #` `  Signif. codes:  0 ‘***’ 0.001 ‘**’ 0.01 ‘*’ 0.05 ‘.’ 0.1 ‘ ’ 1
 
 #' Effect of distance by sector
+#'
 
+# Effect of distance by sector ----------------------------------------------------------------
+m8 <- readRDS(file.path(datadir, 'FinalGEEModel.rds'))
 L <- cbind(matrix(0,36, 48), diag(rep(1,36))) # Contrast matrix
 L <- rbind(L[1:18,],rep(0,84),L[19:36,])
 L[,38] = 1 # Dist2Aorta location
@@ -252,9 +256,32 @@ bl <- cbind('Sector' =labs, bl) %>%
   mutate(Sector = str_remove(Sector, 'rel_angle')) %>%
   select(Sector, Estimate, Std.Error,`Pr(>|X^2|)`, Lower, Upper)
 
+bl %>%
+  mutate_at(vars(Estimate, Lower, Upper), funs(round(exp(-.), 2))) %>%
+  mutate(out = as.character(glue_data(., '{Estimate} ({Upper}, {Lower})'))) %>%
+  select(Sector, out)
+# Full model (m8) output ----------------------------------------------------------------------
+
+library(glue)
+m8 <- readRDS(file.path(datadir, 'FinalGEEModel.rds'))
+bl2 <- broom::tidy(m8)
+bl2 <- bl2 %>%
+  mutate(term = str_replace(term, 'rel_angle', 'Sector = ')) %>%
+  mutate(term = str_replace(term, 'Spine', 'Spinal joint =')) %>%
+  mutate(term = str_replace(term, 'Dist2Aorta', 'Aorta distance')) %>%
+  mutate(OR = exp(estimate)) %>%
+  mutate(CI = as.character(glue_data(.,
+    '({round(exp(estimate - 1.96*std.error),2)}, {round(exp(estimate + 1.96*std.error),2)})'
+  ))) %>%
+  mutate(p.value = ProjTemplate::myformat_pvalue(p.value, digits = 3)) %>%
+  mutate(term = str_replace(term,':', ' x ')) %>%
+  select(term, OR, CI, p.value) %>%
+  mutate(p.value = str_replace(p.value, 'e(-\\d{2})', ' x 10^\\1^'))
+
 
 # GEE with discrete aorta distances -----------------------------------------------------------
 #' We will repeat this process with discretized distance from aorta, cut at <2 and <3 mm
+
 
 munged_data_2 <- munged_data %>%
   mutate(dist2aorta_discrete = cut(round(Dist2Aorta,2),c(0, 2, 3, 100), labels = c('< 2', '\u2265 2 & <3', '\u2265 3'), right = F))
@@ -263,6 +290,17 @@ m8.discrete <- geeglm(formula = SyndPresent ~ rel_angle + dist2aorta_discrete + 
                         rel_angle:dist2aorta_discrete, family = binomial(link = logit), data = munged_data_2,
                       id = ID, corstr = "ex", std.err = "san.se")
 #' This is problematic since many of the rel_angle:dist2aorta_discrete combos have no data
+
+
+# GEE with continous sectors ------------------------------------------------------------------
+
+munged_data3 <- munged_data %>%
+  mutate(rel_angle = abs(as.numeric(rel_angle)/5))
+m8_1 <- geeglm(formula = m8$formula, data = munged_data3,
+               family = binomial(link = logit),
+               id = ID,
+               corstr = 'ex',
+               std.err = 'san.se')
 
 
 # Description of sector x height frequencies --------------------------------------------------
