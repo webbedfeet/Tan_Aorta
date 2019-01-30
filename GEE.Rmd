@@ -1,0 +1,181 @@
+---
+title: "GEE Modeling"
+author: "Abhijit"
+date: "1/13/2019"
+output:
+  word_document: default
+  html_document:
+    self-contained: no
+---
+
+We modeled the relative likelihood of having a syndesmophyte at a particular sector location of a
+particular spinal joint using a generalized estimating equations (GEE) model to account for repeated
+measurements for each patient. This GEE model modeled the presence of syndesmophytes at each sector
+of each spinal joint (dependent variable) on the sector location, spinal joint, distance of the
+sector from the aorta (in mm), and the interaction between the sector location and its distance from
+the aorta. We used a working exchangeable correlation structure and computed robust standard errors
+using sandwich estimators. [need a description of how the sectors are labeled, compared to aorta].
+We see that the effect of aorta distance strongly depends on the sector location, even accounting
+for the effect of spinal joint. The following table summarizes the odds ratios for aorta distance by
+sector location. In each of the following tables, the odds ratios corresponding to aorta distance
+reflect the change in risk for 1 mm __decrease__ in distance, i.e. how does risk change when the
+aorta is __closer__ to the spine.
+
+```{r, echo = FALSE, message = F, warning = F, results = 'asis'}
+ProjTemplate::reload()
+datadir <- file.path(ProjTemplate::find_dropbox(), 'NIAMS','Ward','Tan_Aorta')
+library(glue)
+
+# m0 <- geeglm(SyndPresent ~ rel_angle, data = munged_data %>% mutate(Dist2Aorta = -Dist2Aorta), # Protective as you get closer
+#              id = ID,
+#              family = binomial(link=logit),
+#              corstr = 'ex',
+#              std.err = 'san.se')
+# m8 <- update(m0, . ~ . + rel_angle*Dist2Aorta + Spine)
+# saveRDS(m8, file = file.path(datadir,'FinalGEEmodel.rds'), compress = T)
+
+m8 <- readRDS(file.path(datadir, 'FinalGEEModel.rds'))
+L <- cbind(matrix(0,36, 48), diag(rep(1,36))) # Contrast matrix
+L <- rbind(L[1:18,],rep(0,84),L[19:36,])
+L[,38] = 1 # Dist2Aorta location
+
+bl <- doBy::esticon(m8, L)
+labs <- str_remove(names(coef(m8)[49:84]),':Dist2Aorta')
+labs <- c(labs[1:18], 'rel_angle0', labs[19:36])
+bl <- cbind('Sector' =labs, bl) %>%
+  mutate(Sector = str_remove(Sector, 'rel_angle')) %>%
+  select(Sector, Estimate, Std.Error,`Pr(>|X^2|)`, Lower, Upper) %>% 
+  rename(pval = `Pr(>|X^2|)`)
+
+bl %>%
+  mutate_at(vars(Estimate, Lower, Upper), funs(round(exp(.), 2))) %>%
+  mutate(out = as.character(glue_data(., '{Estimate} ({Lower}, {Upper})'))) %>%
+  select(Sector, out, pval) %>% 
+  mutate(pval = ProjTemplate::myformat_pvalue(pval, digits = 3)) %>% 
+  mutate(pval = str_replace(pval, 'e(-\\d{2})', ' x 10^\\1^')) %>% 
+  rename(`OR (95% CI)` = out, `P-value` = pval) %>% 
+  knitr::kable()
+```
+
+The p-values for these odds ratios are shown in the following figure, and shows that the effect of
+aorta distance is most statistically significant near the nadir sector and decreases as you move away
+from the nadir in either direction; they remain significant up to about 45 degrees from the nadir
+sector. 
+
+```{r pvals, echo = F, fig.path = 'graphs/', dev = c('png', 'pdf'), fig.width = 8, fig.height = 4}
+scientific_10 <- function(x) {
+  parse(text=gsub("1e", "10^", scales::scientific_format()(x)))
+}
+
+bl %>% 
+  mutate(Sector = as.numeric(Sector)) %>% 
+  ggplot(aes(Sector, pval))+geom_point()+
+    geom_hline(yintercept = 0.05, linetype =3)+
+    scale_y_log10('P-value', label=scientific_10, 
+                  breaks = c(0.05, 1e-3, 1e-7, 1e-11))+
+    scale_x_continuous('Sector angle') +
+    theme_bw()
+```
+
+The following plot shows the odds ratio of having a syndesmophyte for every 1 mm the aorta is closer
+to the sector location. At the sector closest to the aorta, each mm the aorta is closer, the risk 
+of having a syndesmophyte halves. This may indicate that the closer the pulsing is to the spine, 
+the lower the risk of syndesmophyte growth. _(This includes 95% CI, next one doesn't)_
+
+```{r OR_CI, echo = F, fig.path = 'graphs/', dev = c('png','pdf'), fig.width=8, fig.height = 4}
+bl %>% 
+  mutate(Sector = as.numeric(Sector)) %>% 
+  mutate(OR = exp(Estimate), 
+         Lower = exp(Estimate - 1.96*Std.Error), 
+         Upper = exp(Estimate + 1.96*Std.Error)) %>% 
+  ggplot(aes(x = Sector, y = OR, ymin = Lower, ymax = Upper))+
+    geom_pointrange() +
+    geom_hline(yintercept = 1, linetype = 2) +
+    scale_y_continuous('Odds ratio') + 
+     theme_bw()
+
+```
+
+Alternatively,
+
+```{r OR_noCI, echo = F, fig.path = 'graphs/', dev = c('png','pdf'), fig.width=8, fig.height = 4}
+bl %>% 
+  mutate(Sector = as.numeric(Sector)) %>% 
+  mutate(OR = exp(Estimate), 
+         Lower = exp((Estimate - 1.96*Std.Error)), 
+         Upper = exp((Estimate + 1.96*Std.Error))) %>% 
+  ggplot(aes(x = Sector, y = OR, ymin = Lower, ymax = Upper))+
+    geom_point() +
+    geom_hline(yintercept = 1, linetype = 2) +
+    scale_y_continuous('Odds ratio') + 
+     theme_bw()
+
+```
+
+
+### Supplementary data
+
+The results from fitting the full GEE model is given below:
+
+```{r, echo = F, message = F, warning = F}
+library(glue)
+m8 <- readRDS(file.path(datadir, 'FinalGEEModel.rds'))
+bl2 <- broom::tidy(m8)
+bl2 <- bl2 %>%
+  mutate(term = str_replace(term, 'rel_angle', 'Sector = ')) %>%
+  mutate(term = str_replace(term, 'Spine', 'Spinal joint = ')) %>%
+  mutate(term = str_replace(term, '([TL]\\d+)([TL]\\d+)','\\1-\\2')) %>% 
+  mutate(term = str_replace(term, 'Dist2Aorta', 'Aorta distance (mm)')) %>%
+  mutate(OR = exp(estimate)) %>%
+  mutate(CI = as.character(glue_data(.,
+    '({round(exp(estimate - 1.96*std.error),2)}, {round(exp(estimate + 1.96*std.error),2)})'
+  ))) %>% 
+  mutate(p.value = ProjTemplate::myformat_pvalue(p.value, digits = 3)) %>%
+  mutate(term = str_replace(term,':', ' x ')) %>%
+  select(term, OR, CI, p.value) %>%
+  filter(term != '(Intercept)') %>% 
+  mutate(p.value = str_replace(p.value, 'e(-\\d{2})', ' x 10^\\1^')) %>% 
+  set_names(c('Variable','Odds Ratio','95% CI','P-value'))
+knitr::kable(bl2)
+
+```
+
+If we fit a GEE model using the sector angles as continuous, we see that for every 5 degrees we move away from the nadir sector (I've modeled it for absolute angle), the odds of having growth increases 29%, and the
+risk also decreases 6% for every mm the aorta is closer to the sector. There is a statistically signficant
+sector by aorta distance interaction.
+
+```{r cts, echo = F, message = F, warning = F}
+# munged_data <- readRDS(file.path(datadir,'rda','cleaned_data_2.rds'))
+# munged_data %<>% mutate( rel_angle = as.factor(rel_angle)) %>%
+#   mutate(rel_angle = fct_relevel(rel_angle, '0')) %>%
+#   mutate(Spine = fct_relevel(Spine, 'T12L1')) %>%
+#   arrange(ID)
+# munged_data3 <- munged_data %>% 
+#   mutate(rel_angle = abs(as.numeric(rel_angle)/5)) %>% 
+#   mutate(Dist2Aorta = -Dist2Aorta)
+# m8_1 <- geeglm(formula = m8$formula, data = munged_data3, 
+#                family = binomial(link = logit),
+#                id = ID,
+#                corstr = 'ex',
+#                std.err = 'san.se')
+# saveRDS(m8_1, file.path(datadir, 'FullGEEcts.rds'))
+m8_1 <- readRDS(file.path(datadir, 'FullGEEcts.rds'))
+bl3 <- broom::tidy(m8_1)
+bl3 <- bl3 %>%
+  mutate(term = str_replace(term, 'rel_angle', 'Sector angle (per 5 degrees)')) %>%
+  mutate(term = str_replace(term, 'Spine', 'Spinal joint = ')) %>%
+  mutate(term = str_replace(term, '([TL]\\d+)([TL]\\d+)','\\1-\\2')) %>% 
+  mutate(term = str_replace(term, 'Dist2Aorta', 'Aorta distance (mm)')) %>%
+  mutate(OR = round(exp(estimate),2)) %>%
+  mutate(CI = as.character(glue_data(.,
+    '({round(exp(estimate - 1.96*std.error),2)}, {round(exp(estimate + 1.96*std.error),2)})'
+  ))) %>% 
+  mutate(p.value = ProjTemplate::myformat_pvalue(p.value, digits = 3)) %>%
+  mutate(p.value = str_replace(p.value, 'e(-\\d+)',' x 10^\\1^')) %>% 
+  mutate(term = str_replace(term,':', ' x ')) %>%
+  filter(term != '(Intercept)') %>% 
+  select(term, OR, CI, p.value) %>% 
+  set_names(c('Variable','Odds Ratio', '95% CI', 'P-value'))
+knitr::kable(bl3)
+```
+
