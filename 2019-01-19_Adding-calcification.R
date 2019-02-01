@@ -74,7 +74,6 @@ broom::tidy(m0) %>%
 
 m1 <- update(m0, .~. + calc:Dist2Aorta)
 
-
 munged_data <- readRDS(file.path(datadir,'rda','cleaned_data_2.rds'))
 munged_data %<>% mutate( rel_angle = as.factor(rel_angle)) %>%
   mutate(rel_angle = fct_relevel(rel_angle, '0')) %>%
@@ -89,5 +88,5 @@ m9 <- update(m8, .~. + calc*Dist2Aorta)
 
 m10 <- update(m8, . ~ . + calc*rel_angle)
 
-m11 <- update(m8, . ~ . + calc + calc : rel_angle : Dist2Aorta)
+m11 <- update(m8, . ~ . +  calc : rel_angle : Dist2Aorta)
 
