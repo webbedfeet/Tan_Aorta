@@ -61,3 +61,33 @@ broom::tidy(m0) %>%
   mutate(`P-value` = str_replace(ProjTemplate::myformat_pvalue(p.value, digits =3), 'e(-\\d{2})',' x 10^\\1^')) %>%
   select(term, OR:`P-value`) %>%
   knitr::kable()
+
+#' #### Understanding the science
+#'
+#' Aortal calcification is being used as a surrogate for inflammation, with the idea that
+#' proximity to calcified areas would promote inflammation in the close IDS, leading to
+#' the promotion of syndesmophyte growth, since the growth is believed to be inflammation-
+#' related. So presence of calcification would be a promotor of growth _biochemically_,
+#' while distance of the aorta would be an inhibitor of growth _biomechanically_.
+#'
+#+ calc-interaction, echo=F, message=F, warning=F
+
+m1 <- update(m0, .~. + calc:Dist2Aorta)
+
+
+munged_data <- readRDS(file.path(datadir,'rda','cleaned_data_2.rds'))
+munged_data %<>% mutate( rel_angle = as.factor(rel_angle)) %>%
+  mutate(rel_angle = fct_relevel(rel_angle, '0')) %>%
+  mutate(Spine = fct_relevel(Spine, 'T12L1')) %>%
+  arrange(ID)
+munged_data <- munged_data %>%
+  left_join(calcification, by = c('ID', 'Spine'))
+
+m8 <- readRDS(file.path(datadir, 'FinalGEEModel.rds'))
+
+m9 <- update(m8, .~. + calc*Dist2Aorta)
+
+m10 <- update(m8, . ~ . + calc*rel_angle)
+
+m11 <- update(m8, . ~ . + calc + calc : rel_angle : Dist2Aorta)
+
