@@ -323,3 +323,24 @@ blah3 <- munged_data_2 %>% mutate(rel_angle = as.numeric(as.character(rel_angle)
 lattice::cloud(prob ~ rel_angle*dist2aorta_discrete | Spine, data = blah3,
                xlab = '', ylab = '', zlab = '',
                scales = list(arrows = F))
+
+# bootstrap standard errors -------------------------------------------------------------------
+
+ProjTemplate::reload()
+library(rsample)
+m8 <- readRDS(file.path(datadir, 'FinalGEEModel.rds'))
+munged_data <- readRDS(file.path(datadir,'rda','cleaned_data_2.rds'))
+munged_data %<>% mutate( rel_angle = as.factor(rel_angle)) %>%
+  mutate(rel_angle = fct_relevel(rel_angle, '0')) %>%
+  mutate(Spine = fct_relevel(Spine, 'T12L1')) %>%
+  mutate(Dist2Aorta = -Dist2Aorta) %>%
+  arrange(ID)
+
+m8 <- update(m8, data = munged_data)
+D <- munged_data %>% nest(-ID)
+bs <- bootstraps(D, times = 500)
+blah <- bs %>%
+  mutate(results = map(splits, ~update(m8, data = unnest(as_tibble(.))) %>% broom::tidy() %>%
+                         select(term, estimate)))
+saveRDS(blah, file = file.path(datadir, 'boots.rds'), compress = T)
+

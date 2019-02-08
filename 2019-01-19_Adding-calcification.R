@@ -95,7 +95,8 @@ m11 <- update(m8, . ~ . +  calc : rel_angle : Dist2Aorta)
 #+ calc_graph, echo = F, message = F, warning = F
 m8 <- readRDS(file.path(datadir, 'FinalGEEModel.rds'))
 
-munged_data2 <- munged_data %>% filter(Spine %in% c('T11T12','T12L1','L1L2','L2L3','L3L4'))
+munged_data2 <- munged_data %>% filter(Spine %in% c('T11T12','T12L1','L1L2','L2L3','L3L4')) %>%
+  mutate(Dist2Aorta = -Dist2Aorta)
 
 munged_data3 <- munged_data %>% mutate(dist_cat = cut(Dist2Aorta, c(0,2,3,50), right=F))
 
@@ -121,11 +122,16 @@ coef_0 <- cbind('Sector' =labs, coef_0) %>%
 
 coefs <- bind_rows(list('Yes' = coef_1, 'No' = coef_0), .id = 'calc') %>%
   as_tibble() %>%
-  mutate(x = as.numeric(Sector) - 1 + 2*ifelse(calc=='Yes',1,0))
+  mutate(x = as.numeric(Sector) - 1 + 2*ifelse(calc=='Yes',1,0)) %>%
+  mutate_at(vars(Estimate, Lower, Upper), exp)
 ggplot(coefs, aes(x = x, y = Estimate, ymin = Lower, ymax = Upper, color = calc))+
   geom_pointrange() +
+  geom_hline(yintercept = 1) +
   scale_color_discrete('Aortic calcification')+
   scale_x_continuous('Sector') +
-  scale_y_continuous('Effect distance to aorta on growth (log-odds)')+
-  theme_bw()
-#ggsave('graphs/calcification.pdf')
+  scale_y_continuous('Odds ratio (95% CI) for
+min AV distance per 1 mm reduction') +
+  theme_bw() +
+  theme(legend.position = 'bottom')
+ggsave('graphs/calcification.pdf')
+
