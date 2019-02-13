@@ -27,7 +27,7 @@ pval_plt <- bl %>%
   geom_hline(yintercept = 0.05, linetype = 3) +
   scale_y_log10('P-value', label = scientific_10,
                 breaks = c(0.05, 1e-3, 1e-7, 1e-11)) +
-  scale_x_continuous('Sector angle') +
+  scale_x_continuous('Angles') +
   theme_bw()
 
 or_plt <- bl %>%
@@ -38,12 +38,10 @@ or_plt <- bl %>%
   ggplot(aes(x = Sector, y = OR, ymin = Lower, ymax = Upper))+
   geom_pointrange(fatten = 1) +
   geom_hline(yintercept = 1, linetype = 2) +
-  scale_x_continuous('Sector angle') +
+  scale_x_continuous('Angles') +
   scale_y_continuous('Odds ratio') +
   theme_bw()
 
 cowplot::plot_grid(or_plt, pval_plt, ncol = 1, nrow = 2, align='v', labels = c('A','B'))
 cowplot::ggsave('graphs/Figure4new.pdf', width = 4, height = 4, units = 'in')
-setwd('graphs')
-system('python pdf2tiff.py -c --dpi 600')
-setwd('..')
+pdf2tiff('graphs', dpi=600, compress=T)
