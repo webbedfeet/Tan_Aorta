@@ -6,6 +6,5 @@ data/rda/*
 *.html
 Rplot*
 graphs/*
-<<<<<<< HEAD
 docs/*
 *.docx
